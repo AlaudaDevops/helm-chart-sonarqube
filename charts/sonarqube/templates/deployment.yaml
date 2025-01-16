@@ -6,20 +6,20 @@ metadata:
   labels:
     app: {{ template "sonarqube.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    release: {{ .Release.Name }}
+    release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service }}
     app.kubernetes.io/name: {{ template "sonarqube.name" . }}-{{ template "sonarqube.fullname" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/part-of: sonarqube
     app.kubernetes.io/component: {{ template "sonarqube.fullname" . }}
-    app.kubernetes.io/version: {{ tpl .Values.image.tag . | quote }}
+    app.kubernetes.io/version: {{ tpl .Values.global.images.sonarqube.tag . | quote }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: {{ template "sonarqube.name" . }}
-      release: {{ .Release.Name }}
+      release: {{ .Release.Name | quote }}
 {{- if .Values.deploymentStrategy }}
   strategy:
 {{ toYaml .Values.deploymentStrategy | indent 4 }}
@@ -28,7 +28,7 @@ spec:
     metadata:
       labels:
         app: {{ template "sonarqube.name" . }}
-        release: {{ .Release.Name }}
+        release: {{ .Release.Name | quote }}
 {{- with .Values.podLabels }}
 {{ toYaml . | indent 8 }}
 {{- end }}
@@ -37,6 +37,11 @@ spec:
         checksum/plugins: {{ include (print $.Template.BasePath "/install-plugins.yaml") . | sha256sum }}
         checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        sso: {{ .Values.oidc.enable | quote }}
+        {{- if .Values.oidc.enable }}
+        # If the server url changed, the pod should be restarted
+        oidc/serverURL: {{ .Values.oidc.serverURL | quote }}
+        {{- end }}
 {{- if .Values.annotations}}
       {{- range $key, $value := .Values.annotations }}
         {{ $key }}: {{ $value | quote }}
@@ -62,6 +67,31 @@ spec:
       {{- if .Values.extraInitContainers }}
 {{ toYaml .Values.extraInitContainers | indent 8 }}
       {{- end }}
+
+      {{- if .Values.oidc.verifyCert }}
+      {{- if ne .Values.oidc.sonarqube.tlsCrt "" }}
+        - command:
+            - sh
+            - -c
+            - |
+              cp -f "${JAVA_HOME}/lib/security/cacerts" /tmp/scripts/cacerts;
+              suffix=$(date +%s)-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 8);
+              keytool -import -v -trustcacerts -alias ipa-${suffix} -file /tmp/tls/tls -keystore \
+              /tmp/scripts/cacerts -noprompt -storepass changeit;
+              ls -artl /tmp/scripts/cacerts;
+          image: "{{ template "sonarqube.image" . }}"
+          imagePullPolicy: IfNotPresent
+          name: tls
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          volumeMounts:
+            - mountPath: /tmp/scripts/
+              name: cacerts
+            - mountPath: /tmp/tls
+              name: tls
+      {{- end }}
+      {{- end }}
+
       {{- if .Values.caCerts.enabled }}
         - name: ca-certs
           image: {{ default "adoptopenjdk/openjdk11:alpine" .Values.caCerts.image }}
@@ -87,7 +117,7 @@ spec:
       {{- end }}
       {{- if or .Values.initSysctl.enabled .Values.elasticsearch.configureNode }}
         - name: init-sysctl
-          image: {{ default "busybox:1.32" .Values.initSysctl.image }}
+          image: "{{ template "initSysctl.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy  }}
           {{- if $securityContext := (default .Values.initContainers.securityContext .Values.initSysctl.securityContext) }}
           securityContext:
@@ -106,13 +136,22 @@ spec:
             {{- . | toYaml | trim | nindent 12 }}
           {{- end }}
       {{- end }}
-      {{- if .Values.plugins.install }}
+      {{- if or (.Values.plugins.install) (.Values.plugins.useDefaultPluginsPackage) }}
         - name: install-plugins
-          image: {{ default "curlimages/curl:7.76.1" .Values.plugins.image }}
+          image: "{{ template "plugins.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy  }}
+          {{- if .Values.plugins.useDefaultPluginsPackage }}
+          command: ["sh",
+            "-c",
+            "mkdir -p /opt/sonarqube/extensions/plugins/tmp &&
+            rm -f /opt/sonarqube/extensions/plugins/tmp/* &&
+            cp /tmp/plugins/*.jar /opt/sonarqube/extensions/plugins/tmp && chmod 0777 -R /opt/sonarqube"
+           ]
+          {{- else }}
           command: ["sh",
             "-e",
             "/tmp/scripts/install_plugins.sh"]
+          {{- end }}
           volumeMounts:
             - mountPath: {{ .Values.sonarqubeFolder }}/extensions/plugins
               name: sonarqube
@@ -140,11 +179,11 @@ spec:
             {{- . | toYaml | trim | nindent 12 }}
           {{- end }}
       {{- end }}
-      {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey (not .Values.elasticsearch.bootstrapChecks) }}
+      {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey .Values.oidc.enable (not .Values.elasticsearch.bootstrapChecks) }}
         - name: concat-properties
-          image: {{ default "busybox:1.32" .Values.initContainers.image }}
+          image: "{{ template "wget.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy  }}
-          command: 
+          command:
           - sh
           - -c
           - |
@@ -159,7 +198,7 @@ spec:
               awk 1 /tmp/props/sonar.properties /tmp/props/secret.properties > /tmp/result/sonar.properties
             fi
           volumeMounts:
-          {{- if or .Values.sonarProperties .Values.sonarSecretKey (not .Values.elasticsearch.bootstrapChecks) }}
+          {{- if or .Values.sonarProperties .Values.sonarSecretKey .Values.oidc.enable (not .Values.elasticsearch.bootstrapChecks) }}
             - mountPath: /tmp/props/sonar.properties
               name: config
               subPath: sonar.properties
@@ -184,7 +223,7 @@ spec:
       {{- end }}
       {{- if .Values.postgresql.enabled }}
         - name: "wait-for-db"
-          image: {{ default "busybox:1.32" .Values.initContainers.image }}
+          image: "{{ template "waitdb.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy  }}
           {{- if $securityContext := .Values.initContainers.securityContext }}
           securityContext:
@@ -192,15 +231,53 @@ spec:
           {{- end }}
           resources:
 {{ toYaml .Values.initContainers.resources | indent 12 }}
-          command: ["/bin/sh", "-c", "for i in $(seq 1 200); do nc -z -w3 {{ .Release.Name}}-postgresql 5432 && exit 0 || sleep 2; done; exit 1"]
+          # nc may be considered a security risk, so we use another way supported by bash.
+          # command: ["/bin/sh", "-c", "for i in $(seq 1 200); do nc -z -w3 {{ .Release.Name}}-postgresql 5432 && exit 0 || sleep 2; done; exit 1"]
+          command: ["/bin/bash", "-c", "for i in $(seq 1 200); do echo > /dev/tcp/{{- .Release.Name -}}-postgresql/5432 && exit 0 || sleep 2; done; exit 1"]
       {{- end }}
+
+      {{- if and (.Values.persistence.host.nodeName) (.Values.persistence.host.path) }}
+        # avoid hostpath volume permission issue
+        - name: "change-permission"
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          image: "{{ template "initSysctl.image" . }}"
+          imagePullPolicy: {{ default "" .Values.imagePullPolicy | quote }}
+          command: [ "/bin/sh" ]
+          args: [ "-c", "chown -R 1000:1000 {{ .Values.sonarqubeFolder }}" ]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - mountPath: {{ .Values.sonarqubeFolder }}
+              name: sonarqube
+            {{- if .Values.sonarSecretKey }}
+            - mountPath: {{ .Values.sonarqubeFolder }}/secret/
+              name: secret
+            {{- end }}
+            - mountPath: {{ .Values.sonarqubeFolder }}/temp
+              name: sonarqube
+              subPath: temp
+            - mountPath: {{ .Values.sonarqubeFolder }}/logs
+              name: sonarqube
+              subPath: logs
+            - mountPath: {{ .Values.sonarqubeFolder }}/data
+              name: sonarqube
+              subPath: data
+      {{- end  }}
+
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- end }}
-    {{- if .Values.nodeSelector }}
+    {{- if or (.Values.nodeSelector) (.Values.persistence.host.nodeName) }}
       nodeSelector:
+    {{- if .Values.nodeSelector }}
 {{ toYaml .Values.nodeSelector | indent 8 }}
     {{- end }}
+    {{- if .Values.persistence.host.nodeName }}
+        kubernetes.io/hostname: {{ .Values.persistence.host.nodeName }}
+    {{- end }}
+    {{- end }}
+
     {{- if .Values.hostAliases }}
       hostAliases:
 {{ toYaml .Values.hostAliases | indent 8 }}
@@ -218,32 +295,23 @@ spec:
         {{- toYaml .Values.extraContainers | nindent 8 }}
       {{- end }}
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ tpl .Values.image.tag . }}"
+          image: "{{ template "sonarqube.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: {{ .Values.service.internalPort }}
               protocol: TCP
+          {{- if or (.Values.plugins.install) (.Values.plugins.useDefaultPluginsPackage) }}
+          command:
+            - /tmp/scripts/copy_plugins.sh
+          {{- end }}
           env:
             - name: SONAR_WEB_JAVAOPTS
               value: {{ template "sonarqube.jvmOpts" . }}
             - name: SONAR_CE_JAVAOPTS
               value: {{ template "sonarqube.jvmCEOpts" . }}
-            - name: SONAR_JDBC_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "jdbc.secret" . }}
-                  key: {{ template "jdbc.secretPasswordKey" . }}
             - name: SONAR_WEB_SYSTEMPASSCODE
-              valueFrom:
-                secretKeyRef:
-                {{- if and .Values.monitoringPasscodeSecretName .Values.monitoringPasscodeSecretKey }}
-                  name: {{ .Values.monitoringPasscodeSecretName }}
-                  key: {{ .Values.monitoringPasscodeSecretKey }}
-                {{- else }}
-                  name: {{ template "sonarqube.fullname" . }}-monitoring-passcode
-                  key: SONAR_WEB_SYSTEMPASSCODE
-                {{- end }}
+              value: "authless_liveness_access"
             {{- with .Values.env }}
             {{- . | toYaml | trim | nindent 12 }}
             {{- end }}
@@ -285,7 +353,18 @@ spec:
 {{- if .Values.persistence.mounts }}
 {{ toYaml .Values.persistence.mounts | indent 12 }}
 {{- end }}
-            {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey (not .Values.elasticsearch.bootstrapChecks) }}
+
+            {{- if .Values.oidc.verifyCert }}
+            {{- if ne .Values.oidc.sonarqube.tlsCrt "" }}
+            # This path must be the jdk cacerts path, $JAVA_HOME/lib/security/cacerts
+            # - mountPath: /usr/local/openjdk-11/lib/security/cacerts
+            - mountPath: /opt/java/openjdk/lib/security/cacerts
+              name: cacerts
+              subPath: cacerts
+            {{- end }}
+            {{- end }}
+
+            {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey .Values.oidc.enable (not .Values.elasticsearch.bootstrapChecks) }}
             - mountPath: {{ .Values.sonarqubeFolder }}/conf/
               name: concat-dir
             {{- end }}
@@ -305,7 +384,7 @@ spec:
             - mountPath: {{ .Values.sonarqubeFolder }}/extensions
               name: sonarqube
               subPath: extensions
-            {{- else if .Values.plugins.install }}
+            {{- else if or (.Values.plugins.install) (.Values.plugins.useDefaultPluginsPackage) }}
             - mountPath: {{ .Values.sonarqubeFolder }}/extensions/plugins
               name: sonarqube
               subPath: extensions/plugins
@@ -318,13 +397,18 @@ spec:
               subPath: logs
             - mountPath: /tmp
               name: tmp-dir
+            - name: copy-plugins
+              mountPath: /tmp/scripts
+            - name: jdbc-secret-volume
+              mountPath: /run/postgresql/secret
+              readOnly: true
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:
 {{- if .Values.persistence.volumes }}
 {{ tpl (toYaml .Values.persistence.volumes | indent 6) . }}
 {{- end }}
-      {{- if or .Values.sonarProperties .Values.sonarSecretKey ( not .Values.elasticsearch.bootstrapChecks) }}
+      {{- if or .Values.sonarProperties .Values.sonarSecretKey .Values.oidc.enable ( not .Values.elasticsearch.bootstrapChecks) }}
       - name: config
         configMap:
           name: {{ template "sonarqube.fullname" . }}-config
@@ -347,6 +431,18 @@ spec:
           items:
           - key: sonar-secret.txt
             path: sonar-secret.txt
+      {{- end }}
+      {{- if .Values.oidc.verifyCert }}
+      {{- if ne .Values.oidc.sonarqube.tlsCrt "" }}
+      - emptyDir: {}
+        name: cacerts
+      - name: tls
+        secret:
+          secretName: {{ .Values.oidc.sonarqube.tlsCrt }}
+          items:
+            - key: ca.crt
+              path: tls
+      {{- end }}
       {{- end }}
       {{- if .Values.caCerts }}
       - name: ca-certs
@@ -377,6 +473,10 @@ spec:
         {{- if .Values.persistence.enabled }}
         persistentVolumeClaim:
           claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ template "sonarqube.fullname" . }}{{- end }}
+        {{- else if and (.Values.persistence.host.nodeName) (.Values.persistence.host.path) }}
+        hostPath:
+          path: {{ .Values.persistence.host.path }}
+          type: DirectoryOrCreate
         {{- else }}
         emptyDir: {{- toYaml .Values.emptyDir | nindent 10 }}
         {{- end  }}
@@ -386,4 +486,19 @@ spec:
       - name : concat-dir
         emptyDir: {{- toYaml .Values.emptyDir | nindent 10 -}}
         {{- end }}
+      - name: copy-plugins
+        configMap:
+          name: {{ template "sonarqube.fullname" . }}-copy-plugins
+          defaultMode: 0755
+          items:
+            - key: copy_plugins.sh
+              path: copy_plugins.sh
+      - name: jdbc-secret-volume
+        projected:
+          sources:
+            - secret:
+                name: {{ template "jdbc.secret" . }}
+                items:
+                  - key: {{ template "jdbc.secretPasswordKey" . }}
+                    path: SONAR_JDBC_PASSWORD
 {{- end }}

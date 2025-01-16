@@ -5,7 +5,7 @@ metadata:
   labels:
     app: {{ template "sonarqube.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-    release: {{ .Release.Name }}
+    release: {{ .Release.Name | quote }}
     heritage: {{ .Release.Service }}
   {{- range $key, $value := .Values.service.labels }}
     {{ $key }}: {{ $value | quote }}
@@ -20,15 +20,15 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.externalPort }}
-      targetPort: http
+      targetPort: {{ .Values.service.internalPort }}
       protocol: TCP
-      name: http
-      {{- if .Values.service.nodePort }}
+      name: {{ .Values.service.name }}
+      {{- if eq .Values.service.type "NodePort" }}
       nodePort: {{ .Values.service.nodePort }}
       {{- end }}
   selector:
     app: {{ template "sonarqube.name" . }}
-    release: {{ .Release.Name }}
+    release: {{ .Release.Name | quote }}
   {{- if eq .Values.service.type "LoadBalancer"}}
   {{- if .Values.service.loadBalancerSourceRanges }}
   loadBalancerSourceRanges:
