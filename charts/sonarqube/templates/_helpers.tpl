@@ -53,7 +53,7 @@ app.kubernetes.io/version: {{ (tpl (include "image.tag" .) . ) | trunc 63 | trim
 Expand the Application Image name.
 */}}
 {{- define "sonarqube.image" -}}
-{{- printf "%s:%s" .Values.image.repository (tpl (include "image.tag" .) .) }}
+{{- printf "%s/%s:%s" .Values.global.registry.address .Values.global.images.sonarqube.repository .Values.global.images.sonarqube.tag -}}
 {{- end -}}
 
 {{/*
@@ -132,7 +132,7 @@ Determine the k8s secretKey contrining the JDBC password
   {{- if and .Values.postgresql.existingSecret .Values.postgresql.existingSecretPasswordKey -}}
   {{- .Values.postgresql.existingSecretPasswordKey -}}
   {{- else -}}
-  {{- "postgresql-password" -}}
+  {{- "postgres-password" -}}
   {{- end -}}
 {{- else if or .Values.jdbcOverwrite.enabled .Values.jdbcOverwrite.enable -}}
   {{- if and .Values.jdbcOverwrite.jdbcSecretName .Values.jdbcOverwrite.jdbcSecretPasswordKey -}}

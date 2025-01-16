@@ -24,6 +24,13 @@ maintainers:
   - name: davividal
     email: davi.koscianski-vidal@sonarsource.com
 annotations:
+  artifacthub.io/changes: |
+    - kind: changed
+      description: "Update SonarQube to 9.9.5.1"
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/images: |
+    - name: sonarqube
+      image: sonarqube:9.9.5.1-community
   artifacthub.io/links: |
     - name: support
       url: https://community.sonarsource.com/

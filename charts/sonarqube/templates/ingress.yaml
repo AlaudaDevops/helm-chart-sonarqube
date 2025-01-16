@@ -1,6 +1,13 @@
 {{- if .Values.ingress.enabled -}}
 {{- $serviceName := include "sonarqube.fullname" . -}}
 {{- $servicePort := .Values.service.externalPort -}}
+
+{{- $ingress := .Values.global.ingress -}}
+{{- $ingressClassName := "" -}}
+{{- if $ingress.ingressClassName }}
+  {{- $ingressClassName = $ingress.ingressClassName -}}
+{{- end -}}
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -12,6 +19,18 @@ metadata:
     {{- end }}
   {{- if or .Values.ingress.annotations (.Values.nginx).enabled (index .Values "ingress-nginx" "enabled") }}
   annotations:
+{{- if and $.Values.global.globalTLSSecretName .Values.ingress.hosts }}
+    {{- $tlsSecrets := list -}}
+    {{- range .Values.ingress.hosts }}
+      {{- $noop := printf "%s=%s" .name $.Values.global.globalTLSSecretName -}}
+      {{- $tlsSecrets = append $tlsSecrets $noop -}}
+    {{- end }}
+    alb.networking.{{ $.Values.global.labelBaseDomain }}/tls: {{ join "," $tlsSecrets | quote }}
+{{- end }}
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+{{- if .Values.ingress.annotations}}
     {{- range $key, $value := .Values.ingress.annotations }}
     {{ $key }}: {{ $value | quote }}
     {{- end }}
