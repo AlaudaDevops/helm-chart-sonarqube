@@ -1,15 +1,66 @@
+global:
+  replicas: 1
+  namespace: alauda-system
+  registry:
+    address: build-harbor.alauda.cn
+  images:
+    sonarqube:
+      code: gitlab-ce.alauda.cn/devops/docker-sonarqube
+      repository: devops/sonarqube
+      tag: 9.9.6-8794229e
+      support_arm: true
+      thirdparty: true
+    initSysctl:
+      repository: ops/busybox
+      tag: latest
+      support_arm: true
+      thirdparty: true
+    pluginPackage:
+      code: gitlab-ce.alauda.cn/devops/docker-sonarqube
+      repository: devops/sonarqube-plugins
+      tag: 9.9.6-8794229e
+      support_arm: true
+      thirdparty: true
+    wget:
+      repository: ops/busybox
+      tag: latest
+      support_arm: true
+      thirdparty: true
+    waitdb:
+      repository: ops/ubuntu
+      tag: "24"
+      support_arm: true
+      thirdparty: true
+    postgresql:
+      repository: middleware/spilo
+      tag: v3.11.0-devops.5
+      support_arm: true
+      thirdparty: true
+    exporter:
+      repository: devops/wrouesnel-postgres_exporter
+      tag: v0.1.1-1
+      support_arm: true
+      thirdparty: true
+  labelBaseDomain: alauda.io
+  # alauda global-secret
+  globalTLSSecretName: ""
+  ingress:
+    ingressClassName: ""
+    # host: ""
+    # tls:
+    #   secretName: ""
 # Default values for sonarqube.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 # If the deployment Type is set to Deployment sonarqube is deployed as a replica set.
-deploymentType: "StatefulSet"
-
+deploymentType: "Deployment"
 # There should not be more than 1 sonarqube instance connected to the same database. Please set this value to 1 or 0 (in case you need to scale down programmatically).
 replicaCount: 1
 
 # This will use the default deployment strategy unless it is overriden
-deploymentStrategy: {}
+deploymentStrategy:
+  type: Recreate # RollingUpdate
 # Uncomment this to scheduler pods on priority
 # priorityClassName: "high-priority"
 
@@ -22,9 +73,7 @@ deploymentStrategy: {}
 OpenShift:
   enabled: false
   createSCC: true
-
-edition: "community"
-
+# edition: "community"
 image:
   repository: sonarqube
   tag: 9.9.8-{{ .Values.edition }}
@@ -49,9 +98,11 @@ elasticsearch:
   bootstrapChecks: true
 
 service:
+  name: sonarqube
   type: ClusterIP
   externalPort: 9000
   internalPort: 9000
+  nodePort: 31342
   labels:
   annotations: {}
   # May be used in example for internal load balancing in GCP:
@@ -96,7 +147,6 @@ ingress:
   # Set the ingressClassName on the ingress record
   # ingressClassName: nginx
 
-# Additional labels for Ingress manifest file
   # labels:
   #  traffic-type: external
   #  traffic-type: internal
@@ -118,7 +168,6 @@ route:
   # See Openshift/OKD route annotation
   # https://docs.openshift.com/container-platform/4.10/networking/routes/route-configuration.html#nw-route-specific-annotations_route-configuration
   # haproxy.router.openshift.io/timeout: 1m
-
   # Additional labels for Route manifest file
   # labels:
   #  external: 'true'
@@ -160,7 +209,6 @@ readinessProbe:
   # A trailing "/" must be included
   sonarWebContext: /
   # sonarWebContext: /sonarqube/
-
 livenessProbe:
   initialDelaySeconds: 60
   periodSeconds: 30
@@ -180,7 +228,6 @@ startupProbe:
   # A trailing "/" must be included
   sonarWebContext: /
   # sonarWebContext: /sonarqube/
-
 initContainers:
   # image: busybox:1.32
   # We allow the init containers to have a separate security context declaration because
@@ -201,7 +248,6 @@ extraInitContainers: {}
 ##   command: ['sh', '-c', 'echo Hello && sleep 3600']
 ##
 extraContainers: []
-
 ## Provide a secret containing one or more certificate files in the keys that will be added to cacerts
 ## The cacerts file will be set via SONARQUBE_WEB_JVM_OPTS and SONAR_CE_JAVAOPTS
 ##
@@ -265,7 +311,12 @@ prometheusExporter:
 #    - "https://github.com/SonarSource/sonar-ldap/releases/download/2.2-RC3/sonar-ldap-plugin-2.2.0.601.jar"
 #
 plugins:
+  deleteDefaultPlugins: true
+  useDefaultPluginsPackage: true
   install: []
+  # - https://github.com/mc1arke/sonarqube-community-branch-plugin/releases/download/1.14.0/sonarqube-community-branch-plugin-1.14.0.jar
+  # - https://github.com/vaulttec/sonar-auth-oidc/releases/download/v2.1.1/sonar-auth-oidc-plugin-2.1.1.jar
+  # - https://build-nexus.alauda.cn/repository/alauda-maven/com/github/spotbugs/sonar-findbugs-plugin/4.0.5.1/sonar-findbugs-plugin-4.0.5.1.jar
 
   # For use behind a corporate proxy when downloading plugins
   # httpProxy: ""
@@ -283,7 +334,6 @@ plugins:
   securityContext:
     runAsUser: 1000
     runAsGroup: 1000
-
 ## Values to add to SONARQUBE_WEB_JVM_OPTS
 ##
 # jvmOpts: "-Djava.net.preferIPv4Stack=true"
@@ -314,19 +364,17 @@ annotations: {}
 ## We usually don't make specific ressource recommandations, as they are heavily dependend on
 ## The usage of SonarQube and the surrounding infrastructure.
 ## Adjust these values to your needs, but make sure that the memory limit is never under 4 GB
-resources:
+resources: 
   limits:
     cpu: 800m
     memory: 4Gi
   requests:
     cpu: 400m
     memory: 2Gi
-
 persistence:
   enabled: false
   ## Set annotations on pvc
   annotations: {}
-
   ## Specify an existing volume claim instead of creating a new one.
   ## When using this option all following options like storageClass, accessMode and size are ignored.
   # existingClaim:
@@ -359,7 +407,25 @@ emptyDir: {}
 #   sonar.forceAuthentication: true
 #   sonar.security.realm: LDAP
 #   ldap.url: ldaps://organization.com
-
+oidc:
+  enable: false
+  clientID: ""
+  clientSecret: ""
+  issuer: ""
+  scope: ""
+  serverURL: ""
+  verifyCert: false
+  sonarqube:
+    forceAuthentication: ""
+    loginStrategy: ""
+    response_types_supported: ""
+    subject_types_supported: ""
+    token_endpoint_auth_methods_supported: ""
+    id_token_signing_alg_values_supported: ""
+    claims_supported: ""
+    scopes_supported: ""
+    tlsCrt: ""
+    tlsKey: ""
 # Additional sonar properties to load from a secret with a key "secret.properties" (must be a string)
 # sonarSecretProperties:
 
@@ -383,9 +449,15 @@ jdbcOverwrite:
   # jdbcSecretName: "sonarqube-jdbc"
   ## and the secretValueKey of the password found within that secret
   # jdbcSecretPasswordKey: "jdbc-password"
+## Configuration value to select database type
+## Option to use "postgresql" or "mysql" database type, by default "postgresql" is chosen
 
+## Set the "enable" field to true of the database type you select (if you want to use internal database) and false of the one you don't select
+database:
+  type: "postgresql"
 ## Configuration values for postgresql dependency
-## ref: https://github.com/bitnami/charts/blob/master/bitnami/postgresql/README.md
+## ref: https://github.com/kubernetes/charts/blob/master/stable/postgresql/README.md
+
 postgresql:
   # Enable to deploy the bitnami PostgreSQL chart
   enabled: true
@@ -405,53 +477,37 @@ postgresql:
   #
   # The bitnami chart enforces the key to be "postgresql-password". This value is only here for historic purposes
   # existingSecretPasswordKey: "postgresql-password"
-  postgresqlUsername: "sonarUser"
-  postgresqlPassword: "sonarPass"
-  postgresqlDatabase: "sonarDB"
+  # Enable to migrate old database to new one in pre-upgrade phase
+  pgsqlMigrateJob: false
+  resources:
+    !!merge <<: *resources
+  database:
+    persistence:
+      enabled: false
+      existingClaim: ""
+      host:
+        nodeName: ""
+        path: /var/sonarqube/database
+  # To use an external PostgreSQL instance, set enabled to false and uncomment
+  # the line below:
+  # postgresServer: ""
+  # To use an external secret for the password for an external PostgreSQL
+  # instance, set enabled to false and provide the name of the secret on the
+  # line below:
+  # postgresPasswordSecret: ""
+  postgresUser: &postgresUser "sonarUser"
+  postgresPassword: &postgresPassword "sonarPass"
+  postgresDatabase: &postgresDatabase "sonarDB"
   # Specify the TCP port that PostgreSQL should use
   service:
     port: 5432
-  resources:
-    limits:
-      cpu: 2
-      memory: 2Gi
-    requests:
-      cpu: 100m
-      memory: 200Mi
-  persistence:
-    enabled: true
-    accessMode: ReadWriteOnce
-    size: 20Gi
-    storageClass:
-  securityContext:
-    # For standard Kubernetes deployment, set enabled=true
-    # If using OpenShift, enabled=false for restricted SCC and enabled=true for anyuid/nonroot SCC
-    enabled: true
-    # fsGroup specification below are not applied if enabled=false. enabled=false is the required setting for OpenShift "restricted SCC" to work successfully.
-    # postgresql dockerfile sets user as 1001
-    fsGroup: 1001
-  containerSecurityContext:
-    # For standard Kubernetes deployment, set enabled=true
-    # If using OpenShift, enabled=false for restricted SCC and enabled=true for anyuid/nonroot SCC
-    enabled: true
-    # runAsUser specification below are not applied if enabled=false. enabled=false is the required setting for OpenShift "restricted SCC" to work successfully.
-    # postgresql dockerfile sets user as 1001
-    runAsUser: 1001
-  volumePermissions:
-    # For standard Kubernetes deployment, set enabled=false
-    # For OpenShift, set enabled=true and ensure to set volumepermissions.securitycontext.runAsUser below.
-    enabled: false
-    # if using restricted SCC set runAsUser: "auto" and if running under anyuid/nonroot SCC - runAsUser needs to match runAsUser above
-    securityContext:
-      runAsUser: 0
-  shmVolume:
-    chmod:
-      enabled: false
-  serviceAccount:
-    ## If enabled = true, and name is not set, postgreSQL will create a serviceAccount
-    enabled: false
-    # name:
-
+    nodePort: 31324
+  # add this configuration to avoid the warning
+  #   Embedded database should be used for evaluation purposes only
+  postgresqlUsername: *postgresUser
+  postgresqlDatabase: *postgresDatabase
+  postgresqlPassword: *postgresPassword
+  postgresqlSSL: "true"
 # Additional labels to add to the pods:
 # podLabels:
 #   key: value
@@ -472,7 +528,6 @@ serviceAccount:
   # automountToken: false # default
   ## Annotations for the Service Account
   annotations: {}
-
 # extraConfig is used to load Environment Variables from Secrets and ConfigMaps
 # which may have been written by other tools, such as external orchestrators.
 #
@@ -491,28 +546,23 @@ serviceAccount:
 # extraConfig:
 #   configmaps:
 #     - external-sonarqube-opts
-
 extraConfig:
   secrets: []
   configmaps: []
 
-# account:
-# The values can be set to define the current and the (new) custom admin passwords at the startup (the username will remain "admin")
-#   adminPassword: admin
-#   currentAdminPassword: admin
-# The above values can be also provided by a secret that contains "password" and "currentPassword" as keys. You can generate such a secret in your cluster
-# using "kubectl create secret generic admin-password-secret-name --from-literal=password=admin --from-literal=currentPassword=admin"
-#   adminPasswordSecretName: ""
-#   securityContext: {}
-#   resources:
-#     limits:
-#       cpu: 100m
-#       memory: 128Mi
-#     requests:
-#       cpu: 100m
-#       memory: 128Mi
-# curlContainerImage: curlimages/curl:latest
-# adminJobAnnotations: {}
-# sonarWebContext: /
-
+account:
+  # The values can be set to define the current and the (new) custom admin passwords at the startup (the username will remain "admin")
+  # adminPassword: "admin"
+  currentAdminPassword: "admin"
+  # The above values can be also provided by a secret that contains "password" and "currentPassword" as keys. You can generate such a secret in your cluster
+  # using "kubectl create secret generic admin-password-secret-name --from-literal=password=admin --from-literal=currentPassword=admin"
+  #   adminPasswordSecretName: ""
+  #   securityContext: {}
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 terminationGracePeriodSeconds: 60
