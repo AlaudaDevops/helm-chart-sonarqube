@@ -27,5 +27,5 @@
 {{- if .Values.account }}
 
 3. Get default admin password
-  $ kubectl get secret -n {{ .Release.Namespace }} {{ template "sonarqube.fullname" . }}-admin-pwd -o jsonpath="{.data.password}" | base64 --decode;
+  $ kubectl get secret -n {{ .Release.Namespace }} {{ template "sonarqube.fullname" . }}-admin-password -o jsonpath="{.data.password}" | base64 --decode;
 {{- end }}

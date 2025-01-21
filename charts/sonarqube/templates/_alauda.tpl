@@ -3,7 +3,7 @@
 {{- end -}}
 
 {{- define "initSysctl.image" -}}
-{{- printf "%s/%s:%s" .Values.global.registry.address .Values.global.images.initSysctl.repository .Values.global.images.initSysctl.tag -}}
+{{- printf "%s/%s:%s" .Values.global.registry.address .Values.global.images.busybox.repository .Values.global.images.busybox.tag -}}
 {{- end -}}
 
 {{- define "plugins.image" -}}
@@ -11,11 +11,11 @@
 {{- end -}}
 
 {{- define "wget.image" -}}
-{{- printf "%s/%s:%s" .Values.global.registry.address .Values.global.images.wget.repository .Values.global.images.wget.tag -}}
+{{- printf "%s/%s:%s" .Values.global.registry.address .Values.global.images.busybox.repository .Values.global.images.busybox.tag -}}
 {{- end -}}
 
 {{- define "waitdb.image" -}}
-{{- printf "%s/%s:%s" .Values.global.registry.address .Values.global.images.waitdb.repository .Values.global.images.waitdb.tag -}}
+{{- printf "%s/%s:%s" .Values.global.registry.address .Values.global.images.busybox.repository .Values.global.images.busybox.tag -}}
 {{- end -}}
 
 {{- define "sonarqube.odic.providerConfiguration" -}}
@@ -24,12 +24,4 @@
 
 {{- define "preupgrade.name" -}}
 {{ (printf "%s-pre-migration" (include "sonarqube.fullname" .) | trunc 63) | trimSuffix "-" }}
-{{- end -}}
-
-{{- define "sonarqube.admin.password" -}}
-{{- if and .Values.account .Values.account.adminPassword -}}
-  {{- .Values.account.adminPassword | quote -}}
-{{- else -}}
-  {{- randAlphaNum 48 | cat (randAscii 8) | replace " " "" | shuffle | join "" | substr 0 48 | quote -}}
-{{- end -}}
 {{- end -}}

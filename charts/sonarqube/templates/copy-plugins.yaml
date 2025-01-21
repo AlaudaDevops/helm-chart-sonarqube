@@ -34,4 +34,4 @@ data:
       fi
 
       # start SonarQube
-      /opt/sonarqube/bin/run.sh
+      /opt/sonarqube/docker/entrypoint.sh
