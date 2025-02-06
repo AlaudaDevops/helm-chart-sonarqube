@@ -1,0 +1,10 @@
+postgresql:
+  enabled: false
+  postgresqlUsername: "postgres"
+  postgresqlPassword: "Wq6KbZtVti"
+  postgresqlDatabase: "sonardb"
+  postgresqlServer: "pg-postgresql.<namespace>.svc.cluster.local"
+  postgresqlSSL: "false"
+  service:
+    port: 5432
+

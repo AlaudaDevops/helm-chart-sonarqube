@@ -17,8 +17,8 @@ global:
       support_arm: true
       thirdparty: true
     busybox:
-      repository: ops/busybox
-      tag: latest
+      repository: ops/ubuntu
+      tag: "24"
       support_arm: true
       thirdparty: true
   labelBaseDomain: alauda.io
