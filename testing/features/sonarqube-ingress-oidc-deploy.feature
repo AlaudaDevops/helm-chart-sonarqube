@@ -4,7 +4,6 @@
 @sonarqube-e2e
 功能: 支持通过 operator 部署 SonarQube
 
-    @smoke
     @automated
     @priority-high
     @sonarqube-operator-deploy-ha
