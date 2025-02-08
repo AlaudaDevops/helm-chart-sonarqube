@@ -37,11 +37,6 @@ spec:
         checksum/plugins: {{ include (print $.Template.BasePath "/install-plugins.yaml") . | sha256sum }}
         checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
-        sso: {{ .Values.oidc.enable | quote }}
-        {{- if .Values.oidc.enable }}
-        # If the server url changed, the pod should be restarted
-        oidc/serverURL: {{ .Values.oidc.serverURL | quote }}
-        {{- end }}
 {{- if .Values.annotations}}
       {{- range $key, $value := .Values.annotations }}
         {{ $key }}: {{ $value | quote }}
@@ -68,33 +63,9 @@ spec:
 {{ toYaml .Values.extraInitContainers | indent 8 }}
       {{- end }}
 
-      {{- if .Values.oidc.verifyCert }}
-      {{- if ne .Values.oidc.sonarqube.tlsCrt "" }}
-        - command:
-            - sh
-            - -c
-            - |
-              cp -f "${JAVA_HOME}/lib/security/cacerts" /tmp/scripts/cacerts;
-              suffix=$(date +%s)-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 8);
-              keytool -import -v -trustcacerts -alias ipa-${suffix} -file /tmp/tls/tls -keystore \
-              /tmp/scripts/cacerts -noprompt -storepass changeit;
-              ls -artl /tmp/scripts/cacerts;
-          image: "{{ template "sonarqube.image" . }}"
-          imagePullPolicy: IfNotPresent
-          name: tls
-          resources:
-{{ toYaml .Values.resources | indent 12 }}
-          volumeMounts:
-            - mountPath: /tmp/scripts/
-              name: cacerts
-            - mountPath: /tmp/tls
-              name: tls
-      {{- end }}
-      {{- end }}
-
       {{- if .Values.caCerts.enabled }}
         - name: ca-certs
-          image: {{ default "adoptopenjdk/openjdk11:alpine" .Values.caCerts.image }}
+          image: "{{ template "sonarqube.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy  }}
           command: ["sh"]
           args: ["-c", "cp -f \"${JAVA_HOME}/lib/security/cacerts\" /tmp/certs/cacerts; if [ \"$(ls /tmp/secrets/ca-certs)\" ]; then for f in /tmp/secrets/ca-certs/*; do keytool -importcert -file \"${f}\" -alias \"$(basename \"${f}\")\" -keystore /tmp/certs/cacerts -storepass changeit -trustcacerts -noprompt; done; fi;"]
@@ -179,9 +150,9 @@ spec:
             {{- . | toYaml | trim | nindent 12 }}
           {{- end }}
       {{- end }}
-      {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey .Values.oidc.enable (not .Values.elasticsearch.bootstrapChecks) }}
+      {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey (not .Values.elasticsearch.bootstrapChecks) }}
         - name: concat-properties
-          image: "{{ template "wget.image" . }}"
+          image: "{{ template "busybox.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy  }}
           command:
           - sh
@@ -198,7 +169,7 @@ spec:
               awk 1 /tmp/props/sonar.properties /tmp/props/secret.properties > /tmp/result/sonar.properties
             fi
           volumeMounts:
-          {{- if or .Values.sonarProperties .Values.sonarSecretKey .Values.oidc.enable (not .Values.elasticsearch.bootstrapChecks) }}
+          {{- if or .Values.sonarProperties .Values.sonarSecretKey (not .Values.elasticsearch.bootstrapChecks) }}
             - mountPath: /tmp/props/sonar.properties
               name: config
               subPath: sonar.properties
@@ -223,7 +194,7 @@ spec:
       {{- end }}
       {{- if .Values.postgresql.enabled }}
         - name: "wait-for-db"
-          image: "{{ template "waitdb.image" . }}"
+          image: "{{ template "busybox.image" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy  }}
           {{- if $securityContext := .Values.initContainers.securityContext }}
           securityContext:
@@ -354,17 +325,7 @@ spec:
 {{ toYaml .Values.persistence.mounts | indent 12 }}
 {{- end }}
 
-            {{- if .Values.oidc.verifyCert }}
-            {{- if ne .Values.oidc.sonarqube.tlsCrt "" }}
-            # This path must be the jdk cacerts path, $JAVA_HOME/lib/security/cacerts
-            # - mountPath: /usr/local/openjdk-11/lib/security/cacerts
-            - mountPath: /opt/java/openjdk/lib/security/cacerts
-              name: cacerts
-              subPath: cacerts
-            {{- end }}
-            {{- end }}
-
-            {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey .Values.oidc.enable (not .Values.elasticsearch.bootstrapChecks) }}
+            {{- if or .Values.sonarProperties .Values.sonarSecretProperties .Values.sonarSecretKey  (not .Values.elasticsearch.bootstrapChecks) }}
             - mountPath: {{ .Values.sonarqubeFolder }}/conf/
               name: concat-dir
             {{- end }}
@@ -408,7 +369,7 @@ spec:
 {{- if .Values.persistence.volumes }}
 {{ tpl (toYaml .Values.persistence.volumes | indent 6) . }}
 {{- end }}
-      {{- if or .Values.sonarProperties .Values.sonarSecretKey .Values.oidc.enable ( not .Values.elasticsearch.bootstrapChecks) }}
+      {{- if or .Values.sonarProperties .Values.sonarSecretKey ( not .Values.elasticsearch.bootstrapChecks) }}
       - name: config
         configMap:
           name: {{ template "sonarqube.fullname" . }}-config
@@ -432,18 +393,7 @@ spec:
           - key: sonar-secret.txt
             path: sonar-secret.txt
       {{- end }}
-      {{- if .Values.oidc.verifyCert }}
-      {{- if ne .Values.oidc.sonarqube.tlsCrt "" }}
-      - emptyDir: {}
-        name: cacerts
-      - name: tls
-        secret:
-          secretName: {{ .Values.oidc.sonarqube.tlsCrt }}
-          items:
-            - key: ca.crt
-              path: tls
-      {{- end }}
-      {{- end }}
+
       {{- if .Values.caCerts }}
       - name: ca-certs
         secret:

@@ -41,7 +41,7 @@ metadata:
 id: test-dex
 public: false
 redirectURIs:
-  - ${sonarqube_base_url}/users/auth/dex/callback
+  - ${sonarqube_base_url}/*
 secret: Z2l0bGFiLW9mZmljaWFsLTAK
 spec: {}
 EOF

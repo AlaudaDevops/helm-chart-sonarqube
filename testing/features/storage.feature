@@ -2,7 +2,7 @@
 
 @sonarqube-chart-deploy
 @sonarqube-chart-deploy-storage
-功能: 支持多种存储类型部署 gitlab
+功能: 支持多种存储类型部署 sonarqube
 
   @automated
   @priority-high
@@ -13,6 +13,7 @@
     并且 已导入 "SonarQube 数据库" 资源: "./testdata/resources/pg-postgresql.yaml"
     并且 已导入 "初始化 SonarQube 数据的 job" 资源: "./testdata/resources/job-init-sonar-db.yaml"
     并且 已导入 "SonarQube 自定义 root 密码" 资源: "./testdata/resources/custom-root-password.yaml"
+    并且 已导入 "自定义 postgres 密码" 资源: "./testdata/resources/custom-pg-password.yaml"
     当 使用 helm 部署实例到 "testing-storage-sc" 命名空间
       """
       chartPath: ../charts/sonarqube
@@ -34,11 +35,12 @@
   @automated
   @priority-high
   @sonarqube-chart-deploy-storage-hostpath
-  场景: 使用 hostpath 方式部署 gitlab
+  场景: 使用 hostpath 方式部署 sonarqube
     假定 命名空间 "testing-storage-hostpath" 已存在
     并且 已导入 "SonarQube 数据库" 资源: "./testdata/resources/pg-postgresql.yaml"
     并且 已导入 "初始化 SonarQube 数据的 job" 资源: "./testdata/resources/job-init-sonar-db.yaml"
     并且 已导入 "SonarQube 自定义 root 密码" 资源: "./testdata/resources/custom-root-password.yaml"
+    并且 已导入 "自定义 postgres 密码" 资源: "./testdata/resources/custom-pg-password.yaml"
     当 使用 helm 部署实例到 "testing-storage-hostpath" 命名空间
       """
       chartPath: ../charts/sonarqube
@@ -66,7 +68,8 @@
     并且 已导入 "SonarQube 数据库" 资源: "./testdata/resources/pg-postgresql.yaml"
     并且 已导入 "初始化 SonarQube 数据的 job" 资源: "./testdata/resources/job-init-sonar-db.yaml"
     并且 已导入 "SonarQube 自定义 root 密码" 资源: "./testdata/resources/custom-root-password.yaml"
-    并且 已导入 "pvc" 资源: "./testdata/resources/storage-pvc.yaml"
+    并且 已导入 "自定义 postgres 密码" 资源: "./testdata/resources/custom-pg-password.yaml"
+    并且 已导入 "pvc" 资源: "./testdata/resources/sonarqube-pvc.yaml"
     当 使用 helm 部署实例到 "testing-storage-pvc" 命名空间
       """
       chartPath: ../charts/sonarqube
@@ -83,4 +86,4 @@
       """
     并且 Pod 资源检查通过
       | name                    | path                                                                        | value         |
-      | sonarqube-pvc-sonarqube | $.spec.volumes[?(@.name == 'sonarqube')][0].persistentVolumeClaim.claimName | pvc-sonarqube |
+      | sonarqube-pvc-sonarqube | $.spec.volumes[?(@.name == 'sonarqube')][0].persistentVolumeClaim.claimName | sonarqube-pvc |

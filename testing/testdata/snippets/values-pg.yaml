@@ -1,10 +1,7 @@
 postgresql:
   enabled: false
-  postgresqlUsername: "postgres"
-  postgresqlPassword: "Wq6KbZtVti"
-  postgresqlDatabase: "sonardb"
-  postgresqlServer: "pg-postgresql.<namespace>.svc.cluster.local"
-  postgresqlSSL: "false"
-  service:
-    port: 5432
-
+jdbcOverwrite:
+  enable: true
+  jdbcSecretName: postgres-password
+  jdbcUrl: jdbc:postgresql://pg-postgresql.<namespace>.svc.cluster.local:5432/sonardb?socketTimeout=1500
+  jdbcUsername: postgres

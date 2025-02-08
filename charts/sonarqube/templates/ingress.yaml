@@ -2,12 +2,6 @@
 {{- $serviceName := include "sonarqube.fullname" . -}}
 {{- $servicePort := .Values.service.externalPort -}}
 
-{{- $ingress := .Values.global.ingress -}}
-{{- $ingressClassName := "" -}}
-{{- if $ingress.ingressClassName }}
-  {{- $ingressClassName = $ingress.ingressClassName -}}
-{{- end -}}
-
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -38,8 +32,8 @@ metadata:
     {{- end }}
 {{- end }}
 spec:
-  {{- if $ingressClassName }}
-  ingressClassName: {{ $ingressClassName | default "" | quote }}
+  {{- if .Values.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.ingressClassName | quote }}
   {{- end }}
   rules:
   {{- range .Values.ingress.hosts }}

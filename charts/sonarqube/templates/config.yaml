@@ -18,21 +18,3 @@ data:
   {{- if .Values.sonarSecretKey }}
     sonar.secretKeyPath={{ .Values.sonarqubeFolder }}/secret/sonar-secret.txt
   {{- end }}
-
-  {{- if .Values.oidc.enable }}
-    sonar.core.serverBaseURL={{ .Values.oidc.serverURL }}
-
-    sonar.forceAuthentication={{ .Values.oidc.sonarqube.forceAuthentication }}
-
-    sonar.auth.oidc.enabled={{ .Values.oidc.enable }}
-
-    sonar.auth.oidc.issuerUri={{ .Values.oidc.issuer }}
-
-    sonar.auth.oidc.clientId.secured={{ .Values.oidc.clientID }}
-
-    sonar.auth.oidc.clientSecret.secured={{ .Values.oidc.clientSecret }}
-
-    sonar.auth.oidc.loginStrategy={{ .Values.oidc.sonarqube.loginStrategy }}
-
-    sonar.auth.oidc.providerConfiguration={{ template "sonarqube.odic.providerConfiguration" . }}
-  {{- end }}

@@ -20,12 +20,8 @@
   echo "Visit http://127.0.0.1:8080 to use your application"
   kubectl port-forward $POD_NAME 8080:{{ .Values.service.externalPort }} -n {{ .Release.Namespace }}
 {{- end }}
-2. To check and remove old version self-managed pgsql, running these commands:
-  $ kubectl get deploy -n {{ .Release.Namespace }} {{ .Release.Name }}-postgresql;
-  $ kubectl delete deploy -n {{ .Release.Namespace }} {{ .Release.Name }}-postgresql;
 
 {{- if .Values.account }}
-
-3. Get default admin password
+2. Get default admin password
   $ kubectl get secret -n {{ .Release.Namespace }} {{ template "sonarqube.fullname" . }}-admin-password -o jsonpath="{.data.password}" | base64 --decode;
 {{- end }}

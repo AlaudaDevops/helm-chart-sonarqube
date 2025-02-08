@@ -7,13 +7,13 @@ global:
     sonarqube:
       code: gitlab-ce.alauda.cn/devops/docker-sonarqube
       repository: devops/sonarqube
-      tag: v9.9.8-98e5dc
+      tag: v9.9.8-88d39b
       support_arm: true
       thirdparty: true
     pluginPackage:
       code: gitlab-ce.alauda.cn/devops/docker-sonarqube
       repository: devops/sonarqube-plugins
-      tag: v9.9.8-cd8e2f
+      tag: v9.9.8-88d39b
       support_arm: true
       thirdparty: true
     busybox:
@@ -392,25 +392,6 @@ sonarProperties:
 #   ldap.url: ldaps://organization.com
   sonar.web.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.14.0.jar=web'
   sonar.ce.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.14.0.jar=ce'
-oidc:
-  enable: false
-  clientID: ""
-  clientSecret: ""
-  issuer: ""
-  scope: ""
-  serverURL: ""
-  verifyCert: false
-  sonarqube:
-    forceAuthentication: ""
-    loginStrategy: ""
-    response_types_supported: ""
-    subject_types_supported: ""
-    token_endpoint_auth_methods_supported: ""
-    id_token_signing_alg_values_supported: ""
-    claims_supported: ""
-    scopes_supported: ""
-    tlsCrt: ""
-    tlsKey: ""
 # Additional sonar properties to load from a secret with a key "secret.properties" (must be a string)
 # sonarSecretProperties:
 

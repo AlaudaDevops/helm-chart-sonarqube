@@ -15,6 +15,7 @@
     并且 已导入 "SonarQube 数据库" 资源: "./testdata/resources/pg-postgresql.yaml"
     并且 已导入 "初始化 SonarQube 数据的 job" 资源: "./testdata/resources/job-init-sonar-db.yaml"
     并且 已导入 "SonarQube 自定义 root 密码" 资源: "./testdata/resources/custom-root-password.yaml"
+    并且 已导入 "自定义 postgres 密码" 资源: "./testdata/resources/custom-pg-password.yaml"
     当 使用 helm 部署实例到 "testing-sonarqube-http" 命名空间
       """
       chartPath: ../charts/sonarqube
@@ -43,6 +44,7 @@
     并且 已导入 "SonarQube 数据库" 资源: "./testdata/resources/pg-postgresql.yaml"
     并且 已导入 "初始化 SonarQube 数据的 job" 资源: "./testdata/resources/job-init-sonar-db.yaml"
     并且 已导入 "SonarQube 自定义 root 密码" 资源: "./testdata/resources/custom-root-password.yaml"
+    并且 已导入 "自定义 postgres 密码" 资源: "./testdata/resources/custom-pg-password.yaml"
     并且 已导入 "tls 证书" 资源: "./testdata/resources/secret-tls-cert.yaml"
     当 使用 helm 部署实例到 "testing-sonarqube-https" 命名空间
       """
@@ -68,6 +70,7 @@
     并且 已导入 "SonarQube 数据库" 资源: "./testdata/resources/pg-postgresql.yaml"
     并且 已导入 "初始化 SonarQube 数据的 job" 资源: "./testdata/resources/job-init-sonar-db.yaml"
     并且 已导入 "SonarQube 自定义 root 密码" 资源: "./testdata/resources/custom-root-password.yaml"
+    并且 已导入 "自定义 postgres 密码" 资源: "./testdata/resources/custom-pg-password.yaml"
     当 使用 helm 部署实例到 "testing-sonarqube-nodeport" 命名空间
       """
       chartPath: ../charts/sonarqube
