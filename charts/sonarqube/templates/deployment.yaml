@@ -59,6 +59,34 @@ spec:
         {{- end }}
       {{- end }}
       initContainers:
+      {{- if and (.Values.persistence.host.nodeName) (.Values.persistence.host.path) }}
+        # avoid hostpath volume permission issue
+        - name: "change-permission"
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          image: "{{ template "initSysctl.image" . }}"
+          imagePullPolicy: {{ default "" .Values.imagePullPolicy | quote }}
+          command: [ "/bin/sh" ]
+          args: [ "-c", "chown -R 1000:1000 {{ .Values.sonarqubeFolder }}" ]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - mountPath: {{ .Values.sonarqubeFolder }}
+              name: sonarqube
+            {{- if .Values.sonarSecretKey }}
+            - mountPath: {{ .Values.sonarqubeFolder }}/secret/
+              name: secret
+            {{- end }}
+            - mountPath: {{ .Values.sonarqubeFolder }}/temp
+              name: sonarqube
+              subPath: temp
+            - mountPath: {{ .Values.sonarqubeFolder }}/logs
+              name: sonarqube
+              subPath: logs
+            - mountPath: {{ .Values.sonarqubeFolder }}/data
+              name: sonarqube
+              subPath: data
+      {{- end  }}
       {{- if .Values.extraInitContainers }}
 {{ toYaml .Values.extraInitContainers | indent 8 }}
       {{- end }}
@@ -206,36 +234,6 @@ spec:
           # command: ["/bin/sh", "-c", "for i in $(seq 1 200); do nc -z -w3 {{ .Release.Name}}-postgresql 5432 && exit 0 || sleep 2; done; exit 1"]
           command: ["/bin/bash", "-c", "for i in $(seq 1 200); do echo > /dev/tcp/{{- .Release.Name -}}-postgresql/5432 && exit 0 || sleep 2; done; exit 1"]
       {{- end }}
-
-      {{- if and (.Values.persistence.host.nodeName) (.Values.persistence.host.path) }}
-        # avoid hostpath volume permission issue
-        - name: "change-permission"
-          resources:
-{{ toYaml .Values.resources | indent 12 }}
-          image: "{{ template "initSysctl.image" . }}"
-          imagePullPolicy: {{ default "" .Values.imagePullPolicy | quote }}
-          command: [ "/bin/sh" ]
-          args: [ "-c", "chown -R 1000:1000 {{ .Values.sonarqubeFolder }}" ]
-          securityContext:
-            runAsUser: 0
-          volumeMounts:
-            - mountPath: {{ .Values.sonarqubeFolder }}
-              name: sonarqube
-            {{- if .Values.sonarSecretKey }}
-            - mountPath: {{ .Values.sonarqubeFolder }}/secret/
-              name: secret
-            {{- end }}
-            - mountPath: {{ .Values.sonarqubeFolder }}/temp
-              name: sonarqube
-              subPath: temp
-            - mountPath: {{ .Values.sonarqubeFolder }}/logs
-              name: sonarqube
-              subPath: logs
-            - mountPath: {{ .Values.sonarqubeFolder }}/data
-              name: sonarqube
-              subPath: data
-      {{- end  }}
-
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- end }}

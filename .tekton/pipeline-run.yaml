@@ -4,7 +4,7 @@ metadata:
   name: sonqube-test
   annotations:
     pipelinesascode.tekton.dev/on-cel-expression: |-
-      target_branch.startsWith("alauda/")
+      target_branch.startsWith("alauda-*")
     pipelinesascode.tekton.dev/max-keep-runs: "5"
 spec:
   taskRunSpecs:
