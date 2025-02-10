@@ -8,12 +8,8 @@
     @priority-high
     @sonarqube-operator-deploy-sso
     场景: 通过默认配置部署 Sonarqube
-        假定 集群已安装 ingress controller
-        并且 已添加域名解析
-            | domain                        | ip           |
-            | test-https-sso.example.com    | <ingress-ip> |
         并且 集群已存在存储类
-        并且 命名空间 "testing-sonarqube-operator1" 已存在
+        并且 命名空间 "testing-sonarqube-operator" 已存在
         并且 已导入 "SonarQube 数据库" 资源: "./testdata/resources/pg-postgresql.yaml"
         并且 已导入 "初始化 SonarQube 数据的 job" 资源: "./testdata/resources/job-init-sonar-db.yaml"
         并且 已导入 "域名 TLS 证书" 资源: "./testdata/resources/secret-tls-cert.yaml"
@@ -22,24 +18,15 @@
         并且 已导入 "pvc" 资源: "./testdata/resources/sonarqube-pvc.yaml"
         并且 执行 "sso 配置" 脚本成功
             | command                                                                                                             |
-            | sh ./testdata/script/prepare-sso-config.sh '<config.{{.acp.baseUrl}}>' '<config.{{.acp.token}}>' '<config.{{.acp.cluster}}>' |
+            | sh ./testdata/script/prepare-sso-config.sh '<config.{{.acp.baseUrl}}>' '<config.{{.acp.token}}>' '<config.{{.acp.cluster}}>'  testing-sonarqube-operator http://<node.first>:<nodeport.http> |
+            | mkdir -p output/images                                                                                                   |
         当 已导入 "sonarqube 实例" 资源
             """
             yaml: "./testdata/ingress-oidc.yaml"
-            patches: 
-            - kind: "Sonarqube"
-              apiVersion: "operator.alaudadevops.io/v1alpha1"
-              metadata:
-                name: "ingress-oidc"
-              data:
-                spec:
-                  helmValues:
-                    oidc:
-                      issuer: <config.{{.acp.baseUrl}}>/dex
             """
         那么 "sonarqube" 可以正常访问
             """
-            url: https://test-https-sso.example.com
+            url: http://<node.first>:<nodeport.http>
             timeout: 10m
             """
         并且 "Sonarqube 组件" 资源检查通过
@@ -48,7 +35,7 @@
         并且 "ingress-oidc" 实例资源检查通过
         并且 SSO 测试通过
             """
-            url: https://test-https-sso.example.com
+            sonarURL: http://<node.first>:<nodeport.http>/sessions/new?return_to=/projects
             acpURL: <config.{{.acp.baseUrl}}>
             acpUser: <config.{{.acp.username}}>
             acpPassword: <config.{{.acp.password}}>

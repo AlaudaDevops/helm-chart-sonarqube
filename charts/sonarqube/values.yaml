@@ -22,13 +22,6 @@ global:
       support_arm: true
       thirdparty: true
   labelBaseDomain: alauda.io
-  # alauda global-secret
-  globalTLSSecretName: ""
-  ingress:
-    ingressClassName: ""
-    # host: ""
-    # tls:
-    #   secretName: ""
 # Default values for sonarqube.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -415,14 +408,9 @@ jdbcOverwrite:
   # jdbcSecretName: "sonarqube-jdbc"
   ## and the secretValueKey of the password found within that secret
   # jdbcSecretPasswordKey: "jdbc-password"
-## Configuration value to select database type
-## Option to use "postgresql" or "mysql" database type, by default "postgresql" is chosen
 
-## Set the "enable" field to true of the database type you select (if you want to use internal database) and false of the one you don't select
-database:
-  type: "postgresql"
 ## Configuration values for postgresql dependency
-## ref: https://github.com/kubernetes/charts/blob/master/stable/postgresql/README.md
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/postgresql/README.md
 postgresql:
   # Enable to deploy the bitnami PostgreSQL chart
   enabled: true
@@ -509,6 +497,7 @@ serviceAccount:
   # automountToken: false # default
   ## Annotations for the Service Account
   annotations: {}
+
 # extraConfig is used to load Environment Variables from Secrets and ConfigMaps
 # which may have been written by other tools, such as external orchestrators.
 #
@@ -527,18 +516,19 @@ serviceAccount:
 # extraConfig:
 #   configmaps:
 #     - external-sonarqube-opts
+
 extraConfig:
   secrets: []
   configmaps: []
 
 account:
-  # The values can be set to define the current and the (new) custom admin passwords at the startup (the username will remain "admin")
-  # adminPassword: "admin"
-  currentAdminPassword: "admin"
-  # The above values can be also provided by a secret that contains "password" and "currentPassword" as keys. You can generate such a secret in your cluster
-  # using "kubectl create secret generic admin-password-secret-name --from-literal=password=admin --from-literal=currentPassword=admin"
-  #   adminPasswordSecretName: ""
-  #   securityContext: {}
+# The values can be set to define the current and the (new) custom admin passwords at the startup (the username will remain "admin")
+#   adminPassword: admin
+#   currentAdminPassword: admin
+# The above values can be also provided by a secret that contains "password" and "currentPassword" as keys. You can generate such a secret in your cluster
+# using "kubectl create secret generic admin-password-secret-name --from-literal=password=admin --from-literal=currentPassword=admin"
+#   adminPasswordSecretName: ""
+#   securityContext: {}
   resources:
     limits:
       cpu: 100m
@@ -546,4 +536,7 @@ account:
     requests:
       cpu: 100m
       memory: 128Mi
-terminationGracePeriodSeconds: 60
+# curlContainerImage: curlimages/curl:latest
+# adminJobAnnotations: {}
+# sonarWebContext: /
+

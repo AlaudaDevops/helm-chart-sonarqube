@@ -10,7 +10,7 @@ spec:
     sonarProperties:
       sonar.web.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.14.0.jar=web'
       sonar.ce.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.14.0.jar=ce'
-      sonar.core.serverBaseURL: https://test-https-sso.example.com
+      sonar.core.serverBaseURL: http://<node.first>:<nodeport.http>
       sonar.forceAuthentication: false
       sonar.auth.oidc.enabled: true
       sonar.auth.oidc.issuerUri: <config.{{.acp.baseUrl}}>/dex
@@ -27,14 +27,10 @@ spec:
       jdbcUsername: postgres
     prometheusExporter:
       enabled: false
-    ingress:
-      enabled: true
-      hosts:
-        - name: test-https-sso.example.com
-      tls:
-        - secretName: test-tls-cert
-          hosts:
-            - test-https-sso.example.com
+    service:
+      name: sonarqube
+      type: NodePort
+      nodePort: <nodeport.http>
     account:
       adminPasswordSecretName: sonarqube-root-password
     persistence:

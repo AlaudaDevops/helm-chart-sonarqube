@@ -15,21 +15,25 @@ import (
 )
 
 type ssoParams struct {
-	BaseURL     string        `yaml:"acpURL"`
+	ACPBaseURL  string        `yaml:"acpURL"`
 	ACPUser     string        `yaml:"acpUser"`
 	ACPPassword string        `yaml:"acpPassword"`
-	URL         string        `yaml:"url"`
+	SonarURL    string        `yaml:"sonarURL"`
 	Timeout     time.Duration `yaml:"timeout"`
 	Headless    bool          `yaml:"headless"`
 }
 
 func checkSSo(ctx context.Context, params *godog.DocString) (ctx2 context.Context, err error) {
-	log := logger.LoggerFromContext(ctx)
-
 	ssoParams := ssoParams{}
 	if err := yaml.Unmarshal([]byte(params.Content), &ssoParams); err != nil {
 		return ctx, err
 	}
+
+	return process(ctx, ssoParams)
+}
+
+func process(ctx context.Context, ssoParams ssoParams) (ctx2 context.Context, err error) {
+	log := logger.LoggerFromContext(ctx)
 
 	if ssoParams.Timeout == 0 {
 		ssoParams.Timeout = 10 * time.Minute
@@ -116,7 +120,7 @@ func loginACP(ctx context.Context, page playwright.Page, params ssoParams) error
 
 	log.Info("正在登录 acp...")
 
-	if _, err := page.Goto(params.BaseURL); err != nil {
+	if _, err := page.Goto(params.ACPBaseURL); err != nil {
 		return fmt.Errorf("导航到登录页面失败: %v", err)
 	}
 
@@ -163,7 +167,7 @@ func loginSonarqube(ctx context.Context, page playwright.Page, params ssoParams)
 
 	log.Info("正在登录 Sonarqube...")
 
-	if _, err := page.Goto(params.URL); err != nil {
+	if _, err := page.Goto(params.SonarURL); err != nil {
 		return fmt.Errorf("导航到 Sonarqube 登录页面失败: %v", err)
 	}
 
@@ -173,7 +177,7 @@ func loginSonarqube(ctx context.Context, page playwright.Page, params ssoParams)
 	for !found {
 		select {
 		case <-timeout:
-			return fmt.Errorf("等待 Dex 按钮超时")
+			return fmt.Errorf("等待 Log in with OpenID Connect 按钮超时")
 		default:
 			// 等待页面加载完成
 			if err := page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
@@ -182,8 +186,8 @@ func loginSonarqube(ctx context.Context, page playwright.Page, params ssoParams)
 				return err
 			}
 			// 等待登录页面元素加载
-			log.Info("等待 Dex 按钮出现...")
-			if _, err := page.WaitForSelector("button:has-text(\"Dex\")", playwright.PageWaitForSelectorOptions{
+			log.Info("等待 Log in with OpenID Connect 按钮出现...")
+			if _, err := page.WaitForSelector(".identity-provider-link", playwright.PageWaitForSelectorOptions{
 				State:   playwright.WaitForSelectorStateVisible,
 				Timeout: playwright.Float(30000),
 			}); err == nil {
@@ -197,9 +201,9 @@ func loginSonarqube(ctx context.Context, page playwright.Page, params ssoParams)
 		}
 	}
 
-	log.Info("点击 Dex 按钮...")
-	if err := page.Click("button:has-text(\"Dex\")"); err != nil {
-		return fmt.Errorf("点击 Dex 按钮失败: %v", err)
+	log.Info("点击 Log in with OpenID Connect 按钮...")
+	if err := page.Click(".identity-provider-link"); err != nil {
+		return fmt.Errorf("点击 Log in with OpenID Connect 按钮失败: %v", err)
 	}
 
 	// Wait for page load to complete
