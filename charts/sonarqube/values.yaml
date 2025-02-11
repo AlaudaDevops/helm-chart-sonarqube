@@ -1,15 +1,39 @@
+global:
+  replicas: 1
+  namespace: alauda-system
+  registry:
+    address: build-harbor.alauda.cn
+  images:
+    sonarqube:
+      code: gitlab-ce.alauda.cn/devops/docker-sonarqube
+      repository: devops/sonarqube
+      tag: v9.9.8-88d39b
+      support_arm: true
+      thirdparty: true
+    pluginPackage:
+      code: gitlab-ce.alauda.cn/devops/docker-sonarqube
+      repository: devops/sonarqube-plugins
+      tag: v9.9.8-88d39b
+      support_arm: true
+      thirdparty: true
+    busybox:
+      repository: ops/ubuntu
+      tag: "24"
+      support_arm: true
+      thirdparty: true
+  labelBaseDomain: alauda.io
 # Default values for sonarqube.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 # If the deployment Type is set to Deployment sonarqube is deployed as a replica set.
-deploymentType: "StatefulSet"
-
+deploymentType: "Deployment"
 # There should not be more than 1 sonarqube instance connected to the same database. Please set this value to 1 or 0 (in case you need to scale down programmatically).
 replicaCount: 1
 
 # This will use the default deployment strategy unless it is overriden
-deploymentStrategy: {}
+deploymentStrategy:
+  type: Recreate # RollingUpdate
 # Uncomment this to scheduler pods on priority
 # priorityClassName: "high-priority"
 
@@ -22,9 +46,7 @@ deploymentStrategy: {}
 OpenShift:
   enabled: false
   createSCC: true
-
-edition: "community"
-
+# edition: "community"
 image:
   repository: sonarqube
   tag: 9.9.8-{{ .Values.edition }}
@@ -49,9 +71,11 @@ elasticsearch:
   bootstrapChecks: true
 
 service:
+  name: sonarqube
   type: ClusterIP
   externalPort: 9000
   internalPort: 9000
+  nodePort: 31342
   labels:
   annotations: {}
   # May be used in example for internal load balancing in GCP:
@@ -96,7 +120,6 @@ ingress:
   # Set the ingressClassName on the ingress record
   # ingressClassName: nginx
 
-# Additional labels for Ingress manifest file
   # labels:
   #  traffic-type: external
   #  traffic-type: internal
@@ -118,7 +141,6 @@ route:
   # See Openshift/OKD route annotation
   # https://docs.openshift.com/container-platform/4.10/networking/routes/route-configuration.html#nw-route-specific-annotations_route-configuration
   # haproxy.router.openshift.io/timeout: 1m
-
   # Additional labels for Route manifest file
   # labels:
   #  external: 'true'
@@ -160,7 +182,6 @@ readinessProbe:
   # A trailing "/" must be included
   sonarWebContext: /
   # sonarWebContext: /sonarqube/
-
 livenessProbe:
   initialDelaySeconds: 60
   periodSeconds: 30
@@ -180,7 +201,6 @@ startupProbe:
   # A trailing "/" must be included
   sonarWebContext: /
   # sonarWebContext: /sonarqube/
-
 initContainers:
   # image: busybox:1.32
   # We allow the init containers to have a separate security context declaration because
@@ -201,7 +221,6 @@ extraInitContainers: {}
 ##   command: ['sh', '-c', 'echo Hello && sleep 3600']
 ##
 extraContainers: []
-
 ## Provide a secret containing one or more certificate files in the keys that will be added to cacerts
 ## The cacerts file will be set via SONARQUBE_WEB_JVM_OPTS and SONAR_CE_JAVAOPTS
 ##
@@ -228,7 +247,7 @@ initFs:
     privileged: true
 
 prometheusExporter:
-  enabled: true
+  enabled: false
   # jmx_prometheus_javaagent version to download from Maven Central
   version: "0.16.0"
   # Alternative full download URL for the jmx_prometheus_javaagent.jar (overrides prometheusExporter.version)
@@ -265,7 +284,12 @@ prometheusExporter:
 #    - "https://github.com/SonarSource/sonar-ldap/releases/download/2.2-RC3/sonar-ldap-plugin-2.2.0.601.jar"
 #
 plugins:
+  deleteDefaultPlugins: true
+  useDefaultPluginsPackage: true
   install: []
+  # - https://github.com/mc1arke/sonarqube-community-branch-plugin/releases/download/1.14.0/sonarqube-community-branch-plugin-1.14.0.jar
+  # - https://github.com/vaulttec/sonar-auth-oidc/releases/download/v2.1.1/sonar-auth-oidc-plugin-2.1.1.jar
+  # - https://build-nexus.alauda.cn/repository/alauda-maven/com/github/spotbugs/sonar-findbugs-plugin/4.0.5.1/sonar-findbugs-plugin-4.0.5.1.jar
 
   # For use behind a corporate proxy when downloading plugins
   # httpProxy: ""
@@ -283,7 +307,6 @@ plugins:
   securityContext:
     runAsUser: 1000
     runAsGroup: 1000
-
 ## Values to add to SONARQUBE_WEB_JVM_OPTS
 ##
 # jvmOpts: "-Djava.net.preferIPv4Stack=true"
@@ -314,19 +337,17 @@ annotations: {}
 ## We usually don't make specific ressource recommandations, as they are heavily dependend on
 ## The usage of SonarQube and the surrounding infrastructure.
 ## Adjust these values to your needs, but make sure that the memory limit is never under 4 GB
-resources:
+resources: 
   limits:
     cpu: 800m
     memory: 4Gi
   requests:
     cpu: 400m
     memory: 2Gi
-
 persistence:
   enabled: false
   ## Set annotations on pvc
   annotations: {}
-
   ## Specify an existing volume claim instead of creating a new one.
   ## When using this option all following options like storageClass, accessMode and size are ignored.
   # existingClaim:
@@ -346,6 +367,9 @@ persistence:
   volumes: []
   ## Specify extra mounts. Refer to ".spec.containers.volumeMounts" specification : https://kubernetes.io/fr/docs/concepts/storage/volumes/
   mounts: []
+  host:
+    nodeName: ""
+    path: /var/sonarqube/portal
 
 # In case you want to specify different resources for emptyDir than {}
 emptyDir: {}
@@ -355,11 +379,12 @@ emptyDir: {}
 
 # A custom sonar.properties file can be provided via dictionary.
 # For example:
-# sonarProperties:
+sonarProperties:
 #   sonar.forceAuthentication: true
 #   sonar.security.realm: LDAP
 #   ldap.url: ldaps://organization.com
-
+  sonar.web.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.14.0.jar=web'
+  sonar.ce.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.14.0.jar=ce'
 # Additional sonar properties to load from a secret with a key "secret.properties" (must be a string)
 # sonarSecretProperties:
 
@@ -496,7 +521,7 @@ extraConfig:
   secrets: []
   configmaps: []
 
-# account:
+account:
 # The values can be set to define the current and the (new) custom admin passwords at the startup (the username will remain "admin")
 #   adminPassword: admin
 #   currentAdminPassword: admin
@@ -504,15 +529,14 @@ extraConfig:
 # using "kubectl create secret generic admin-password-secret-name --from-literal=password=admin --from-literal=currentPassword=admin"
 #   adminPasswordSecretName: ""
 #   securityContext: {}
-#   resources:
-#     limits:
-#       cpu: 100m
-#       memory: 128Mi
-#     requests:
-#       cpu: 100m
-#       memory: 128Mi
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 # curlContainerImage: curlimages/curl:latest
 # adminJobAnnotations: {}
 # sonarWebContext: /
 
-terminationGracePeriodSeconds: 60

@@ -20,3 +20,12 @@
   echo "Visit http://127.0.0.1:8080 to use your application"
   kubectl port-forward $POD_NAME 8080:{{ .Values.service.externalPort }} -n {{ .Release.Namespace }}
 {{- end }}
+
+{{- if or .Values.account.adminPassword .Values.account.adminPasswordSecretName}}
+2. Get default admin password
+{{- if .Values.account.adminPasswordSecretName}}
+  $ kubectl get secret -n {{ .Release.Namespace }} {{ .Values.account.adminPasswordSecretName }} -o jsonpath="{.data.password}" | base64 --decode;
+{{- else }}
+  $ kubectl get secret -n {{ .Release.Namespace }} {{ template "sonarqube.fullname" . }}-admin-password -o jsonpath="{.data.password}" | base64 --decode;
+{{- end }}
+{{- end }}
