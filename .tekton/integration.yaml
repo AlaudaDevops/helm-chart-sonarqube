@@ -1,22 +1,37 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: sonqube-test
+  name: sonqube-integration-test
   annotations:
+    pipelinesascode.tekton.dev/on-comment: "^((/test-all)|(/sonar-e2e)|(test-multi.*\ sonar-e2e.*))$"
     pipelinesascode.tekton.dev/on-cel-expression: |-
-      target_branch.startsWith("alauda-*")
+      (
+        source_branch.matches("^(main|master|release-.*)$")
+      ) && (
+        "testing/***".pathChanged() ||
+        ".tekton/integration.yaml".pathChanged()
+      ) && ((
+        event == "push" && (
+          source_branch.matches("^(main|master|release.*|alauda.*)$") ||
+          target_branch.matches("^(main|master|release.*|alauda.*)$") ||
+          target_branch.startsWith("refs/tags/")
+        )
+      ) || (
+        event == "pull_request" && (
+          target_branch.matches("^(main|master|release-.*)$")
+        )
+      ))
+
     pipelinesascode.tekton.dev/max-keep-runs: "5"
 spec:
   taskRunSpecs:
     - pipelineTaskName: run-test
-      stepOverrides:
-        - name: script
-          resources:
-            limits:
-              cpu: "4"
-              memory: 4Gi
+      computeResources:
+        limits:
+          cpu: "4"
+          memory: 4Gi
   pipelineRef:
-    resolver: git
+    resolver: hub
     params:
       - name: catalog
         value: alauda
@@ -37,31 +52,19 @@ spec:
         commit: "{{ revision }}"
     - name: test
       value:
-        image: docker-mirrors.alauda.cn/library/golang:1.23.3-bookworm
+        image: registry.alauda.cn:60080/devops/builder-go:1.23
         command: |
           set -x
           cd $(workspaces.source.path)/testing
 
           export PATH=$(pwd)/bin:$PATH
-          export YQ_VERSION=4.25.2
-          export KUBECTL_VERSION=1.28.2
-          export HELM_VERSION=3.12.3
 
           # install dependencies
-          mkdir bin
-          if [ "$(arch)" = "arm64" ] || [ "$(arch)" = "aarch64" ]; then
-            export ARCH="arm64"
-          else
-            export ARCH="amd64"
-          fi
-          mkdir -p tmp
-          curl -sfL https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_${ARCH} -o ./bin/yq
-          curl -sfL https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl -o ./bin/kubectl
-          curl -sfL https://get.helm.sh/helm-v${HELM_VERSION}-linux-${ARCH}.tar.gz | tar xzf - -C tmp 2>&1 && mv tmp/linux-${ARCH}/helm ./bin
-          chmod +x ./bin/*
-          yq --version
-          kubectl version --client
-          helm version
+          ./hack/install-test-dependency.sh $(pwd)/bin
+
+          cd $(workspaces.source.path)/charts/sonarqube
+          helm dependency update
+          cd $(workspaces.source.path)/testing
 
           export KUBECONFIG=$(workspaces.config.path)/vcluster-config
           kubectl config view
@@ -71,7 +74,7 @@ spec:
 
           echo "run integration tests..."
           export REPORT=allure
-          make test-smoke
+          make test
     - name: vcluster
       value:
         custom-config: |
@@ -88,6 +91,8 @@ spec:
       value:
         command: |
           cd $(workspaces.source.path)/testing
+
+          mv ./godogs/allure-results allure-results
           allure generate --clean
 
           echo "Listing contents of report directory"

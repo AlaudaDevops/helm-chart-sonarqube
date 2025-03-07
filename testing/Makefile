@@ -1,5 +1,5 @@
 REPORT ?= pretty
-GODOG_ARGS ?= --godog.concurrency=2 --godog.format=$(REPORT)
+GODOG_ARGS ?= --godog.concurrency=1 --godog.format=$(REPORT)
 E2E_CONFIG ?= ./config.yaml
 TEST_COMMAND ?= go test -timeout=1h -v -count 1 .
 ARCH ?= amd64
@@ -19,16 +19,11 @@ test: create-testing-ns
 	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags=$(TAGS)
 
 test-smoke: create-testing-ns
-	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags="@smoke && ~@e2e"
+	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags="@smoke"
 
-test-all: create-testing-ns
-	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags="~@e2e"
 
 test-sonarqube-e2e: create-testing-ns
 	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags="@sonarqube-e2e"
-
-test-e2e: create-testing-ns
-	bash -x hack/run-e2e.sh $(E2E_CONFIG)
 
 report:
 	allure generate --clean
