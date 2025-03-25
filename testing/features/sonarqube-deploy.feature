@@ -6,6 +6,7 @@
 
     @automated
     @priority-high
+    @sonarqube-operator-deploy
     @allure.label.case_id:sonarqube-operator-deploy
     场景: 通过默认配置部署 Sonarqube
         假定 集群已存在存储类
