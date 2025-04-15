@@ -15,14 +15,17 @@ generate:
 create-testing-ns:
 	kubectl create ns bdd-testing || true
 
+clean:
+	kubectl delete --ignore-not-found=true namespace -l testing.suite-name=SonarQube
+
 TAGS ?= @sonarqube-chart-deploy
-test: create-testing-ns
+test: clean create-testing-ns
 	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags=$(TAGS)
 
-test-e2e: create-testing-ns
+test-e2e: clean create-testing-ns
 	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags="@sonarqube-e2e"
 
-sonarqube: create-testing-ns
+sonarqube: clean create-testing-ns
 	$(TEST_COMMAND) $(GODOG_ARGS) --godog.tags="@sonarqube-feature"
 
 report:

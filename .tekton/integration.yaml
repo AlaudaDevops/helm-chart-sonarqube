@@ -1,33 +1,47 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: sonarqube-integration-test
+  name: sonar-integration
   annotations:
-    pipelinesascode.tekton.dev/on-comment: "^((/test-all)|(/integration-test)|(test-multi.*\ sonar-e2e.*))$"
+    pipelinesascode.tekton.dev/on-comment: "^((/test-all)|(/test-image))"
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: |-
-      (
-        source_branch.matches("^(main|release-.*|alauda.*)$")
-      ) && (
-        "charts/sonarqube/***".pathChanged() ||
-        ".tekton/integration.yaml".pathChanged()
-      ) && ((
-        event == "push" && (
-          source_branch.matches("^(main|release-.*|alauda.*)$") ||
-          target_branch.matches("^(main|release-.*|alauda.*)$") ||
-          target_branch.startsWith("refs/tags/")
-        )
-      ))
-    pipelinesascode.tekton.dev/max-keep-runs: "5"
+      target_branch.matches("^(main|release-.*|alauda-.*)$") && !last_commit_title.contains("Auto-commit")
 spec:
   taskRunSpecs:
-    - pipelineTaskName: run-test
-      computeResources:
-        limits:
-          cpu: "4"
-          memory: 4Gi
-  timeouts:
-    pipeline: 5h
-    tasks: 5h
+  - pipelineTaskName: run-test
+    computeResources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+  - pipelineTaskName: calculate-commit-sha
+    podTemplate:
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: "OnRootMismatch"
+  - pipelineTaskName: build-test-image
+    podTemplate:
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: "OnRootMismatch"
+  - pipelineTaskName: select-test-image
+    podTemplate:
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: "OnRootMismatch"
+  - pipelineTaskName: commit-test-image
+    podTemplate:
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: "OnRootMismatch"
   pipelineRef:
     resolver: hub
     params:
@@ -40,7 +54,7 @@ spec:
       - name: name
         value: vcluster-integration-test
       - name: version
-        value: "0.1"
+        value: "0.2"
 
   params:
     - name: git-revision
@@ -50,7 +64,6 @@ spec:
         commit: "{{ revision }}"
     - name: test
       value:
-        image: build-harbor.alauda.cn/devops/sonarqube-ce-test:v2025.1.0-v0.1.0-testart0.1024.ga81c161-a81c16
         command: |
           set -x
           export KUBECONFIG=$(workspaces.config.path)/vcluster-config
@@ -61,6 +74,18 @@ spec:
           export REPORT=allure
           export TAGS='@sonarqube-chart-deploy'
           make test
+    - name: build-test-image # it is optional to build test image
+      value:
+        image-repository: build-harbor.alauda.cn/devops/sonarqube-ce-test
+        dockerfile-path: testing/Dockerfile
+    - name: commit-test-image # it is optional to commit test image to upstream repository
+      value:
+        upstream: |
+          repo-url: https://github.com/AlaudaDevops/devops-artifact.git
+          branch-name: main
+          yaml-file-path: ./values.yaml
+        upstream-branch-condition: "^(main|master|release-.*|alauda-.*)$"
+        upstream-secret: github-credentials
     - name: vcluster
       value:
         custom-config: |
@@ -106,3 +131,13 @@ spec:
     - name: upload-conf
       secret:
         secretName: upload-allure-report-conf
+    - name: dockerconfig
+      secret:
+        secretName: build-harbor.kauto.docfj
+    - name: basic-auth
+      secret:
+        secretName: github-credentials
+    - name: gitversion-config
+      configMap:
+        name: gitversion-config
+
