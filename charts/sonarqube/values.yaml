@@ -7,10 +7,10 @@ global:
     sonarqube:
       code: github.com/AlaudaDevops/docker-sonarqube
       repository: devops/sonarqube
-      tag: v2025.1.0-691e4e
+      tag: v2025.1.0-01cf00
       support_arm: true
       thirdparty: true
-      digest: sha256:ce418b05edf9be2f3f03b0e043aa29842aeda6c390f849ec328c450d222c0661
+      digest: sha256:b87f506196db8ec1c1ccd55e1ff05aec8ede1cd9ef7fd43c84648de0ff169f1c
     pluginPackage:
       code: github.com/AlaudaDevops/docker-sonarqube
       repository: devops/sonarqube-plugins
