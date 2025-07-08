@@ -14,10 +14,10 @@ global:
     pluginPackage:
       code: github.com/AlaudaDevops/docker-sonarqube
       repository: devops/sonarqube-plugins
-      tag: v2025.1.0-01cf00
+      tag: v2025.1.0-gbd065a4-bd065a
       support_arm: true
       thirdparty: true
-      digest: sha256:cda38ab0192460efc4b4fe19021f3afc8f6328bc88c60f11db326acdcdbd583c
+      digest: sha256:565500e7f0acfb7da4693eaf49b24629dc1fcd7cc6ca4571809c794959d0c0d8
     busybox:
       repository: ops/ubuntu
       tag: "24"
