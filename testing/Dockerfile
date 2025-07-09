@@ -15,12 +15,14 @@ FROM docker-mirrors.alauda.cn/library/openjdk:17-jdk-slim
 
 WORKDIR /app
 
+ARG SONAR_SCANNER_VERSION=7.1.0.4889
 RUN set -ex; \
     apt-get update; \
     apt-get install -y nodejs unzip jq maven git curl ca-certificates tzdata bash locales make wget git jq; \
-    curl -O https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip; \
-    unzip sonar-scanner-cli-6.2.1.4610-linux-x64.zip; \
-    rm sonar-scanner-cli-6.2.1.4610-linux-x64.zip; \
+    curl -O https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip; \
+    unzip sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip; \
+    mv sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64 sonar-scanner; \
+    rm sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip; \
     rm -rf /var/lib/apt/lists/*
 
 ARG YQ_VERSION=4.25.2
@@ -47,7 +49,7 @@ RUN set -eux; \
     ./bin/helm version && \
     jq --version
 
-ENV PATH="${PATH}:/app/sonar-scanner-6.2.1.4610-linux-x64/bin:/app/bin"
+ENV PATH="${PATH}:/app/sonar-scanner/bin:/app/bin"
 
 COPY --from=builder /tools/bin/sonarqube-e2e.test /app/bin/sonarqube-e2e.test
 
