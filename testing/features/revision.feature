@@ -10,8 +10,8 @@
     场景: 分支扫描
         假定 执行 "sonar 扫描" 脚本成功
             | command                                                                                                        |
-            | bash scripts/scan.sh repos/go-example sonar-scanner -Dsonar.projectKey=revision-branch -Dsonar.branch.name=main -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.login=<config.{{.sonar.token}}> |
-            | bash scripts/scan.sh repos/go-example sonar-scanner -Dsonar.projectKey=revision-branch -Dsonar.branch.name=abc -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.login=<config.{{.sonar.token}}> |
+            | bash scripts/scan.sh repos/go-example sonar-scanner -Dsonar.projectKey=revision-branch -Dsonar.branch.name=main -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.token=<config.{{.sonar.token}}> |
+            | bash scripts/scan.sh repos/go-example sonar-scanner -Dsonar.projectKey=revision-branch -Dsonar.branch.name=abc -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.token=<config.{{.sonar.token}}> |
         并且 SonarQube 分析通过
             """
             host: <config.{{.sonar.url}}>
@@ -30,7 +30,7 @@
     场景: PR 扫描
         假定 执行 "main 分支扫描" 脚本成功
             | command                                                                                                     |
-            | bash scripts/scan.sh repos/go-example sonar-scanner -Dsonar.projectKey=revision-pr -Dsonar.branch.name=main -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.login=<config.{{.sonar.token}}> |
+            | bash scripts/scan.sh repos/go-example sonar-scanner -Dsonar.projectKey=revision-pr -Dsonar.branch.name=main -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.token=<config.{{.sonar.token}}> |
         并且 SonarQube 分析通过
             """
             host: <config.{{.sonar.url}}>
@@ -40,7 +40,7 @@
             """
         并且 执行 "PR 源分支扫描" 脚本成功
             | command                                                                                                                                                                |
-            | bash -c 'cd repos/go-example && sonar-scanner -Dsonar.projectKey=revision-pr -Dsonar.pullrequest.key=123 -Dsonar.pullrequest.branch=abc -Dsonar.pullrequest.base=main -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.login=<config.{{.sonar.token}}>' |
+            | bash -c 'cd repos/go-example && sonar-scanner -Dsonar.projectKey=revision-pr -Dsonar.pullrequest.key=123 -Dsonar.pullrequest.branch=abc -Dsonar.pullrequest.base=main -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.token=<config.{{.sonar.token}}>' |
         并且 SonarQube 分析通过
             """
             host: <config.{{.sonar.url}}>

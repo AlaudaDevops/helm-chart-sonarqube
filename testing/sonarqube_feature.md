@@ -50,7 +50,7 @@ sonar 支持配置的参数：
 设置 sonar server 信息及凭据
 
 ```bash
-sonar-scanner -Dsonar.login=myAuthenticationToken -Dsonar.host.url=http://localhost:9000
+sonar-scanner -Dsonar.token=myAuthenticationToken -Dsonar.host.url=http://localhost:9000
 ```
 
 ### 作为 cli 扫描

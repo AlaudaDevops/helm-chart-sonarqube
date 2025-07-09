@@ -55,8 +55,8 @@ make test-e2e
 
 ```yaml
 sonar:
-  url: https://sonaruqbe.com # edge 的 url
-  token: xxxx # edge 的 token
+  url: https://sonarqube.com # sonarqube server 的 url
+  token: xxxx # sonarqube server 的 token, user 类型的
 ```
 
 将配置文件保存在 testing 目录下，文件名称为 config.yaml。（也可以保存在其他路径，然后通过 E2E_CONFIG 环境变量指定配置文件的路径）

@@ -10,7 +10,7 @@
     场景: 扫描 Java 项目
         假定 执行 "sonar 扫描" 脚本成功
             | command                                                                                                                           |
-            | bash scripts/scan.sh repos/maven-simple mvn verify sonar:sonar -Dsonar.projectKey=language-java -Dsonar.projectName=language-java -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.login=<config.{{.sonar.token}}> |
+            | bash scripts/scan.sh repos/maven-simple mvn verify sonar:sonar -Dsonar.projectKey=language-java -Dsonar.projectName=language-java -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.token=<config.{{.sonar.token}}> |
         并且 SonarQube 分析通过
             """
             host: <config.{{.sonar.url}}>
@@ -28,7 +28,7 @@
     场景大纲: 扫描其他常用语言项目
         假定 执行 "sonar 扫描" 脚本成功
             | command                                                                                                |
-            | bash scripts/scan.sh <path> sonar-scanner -Dsonar.projectKey=<projectKey> -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.login=<config.{{.sonar.token}}> |
+            | bash scripts/scan.sh <path> sonar-scanner -Dsonar.projectKey=<projectKey> -Dsonar.host.url=<config.{{.sonar.url}}> -Dsonar.token=<config.{{.sonar.token}}> |
         并且 SonarQube 分析通过
             """
             host: <config.{{.sonar.url}}>
