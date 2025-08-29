@@ -18,10 +18,10 @@ spec:
             - sh
             - -c
             - |
-              export pg_host=<config.{{.toolchains.postgresql.host | default "host"}}>
+              export pg_host=<config.{{.toolchains.postgresql-14.host | default "host"}}>
               export PGPASSWORD=${POSTGRES_POSTGRES_PASSWORD};
               export PGUSER=postgres;
-              export port=<config.{{.toolchains.postgresql.port | default "5432"}}>
+              export port=<config.{{.toolchains.postgresql-14.port | default "5432"}}>
               until pg_isready -U ${PGUSER} -h ${pg_host} -p ${port}; do
                 echo "等待 Postgres 启动..."
                 sleep 2

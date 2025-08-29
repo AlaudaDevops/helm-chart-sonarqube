@@ -10,8 +10,8 @@ spec:
     jdbcOverwrite:
       enable: true
       jdbcSecretName: sonarqube-pg
-      jdbcUrl: jdbc:postgresql://<config.{{.toolchains.postgresql.host | default "devops-pg.devops-ns.svc"}}>:<config.{{.toolchains.postgresql.port | default "5432"}}>/sonarqubedb?socketTimeout=1500
-      jdbcUsername: <config.{{.toolchains.postgresql.username | default "postgres"}}>
+      jdbcUrl: jdbc:postgresql://<config.{{.toolchains.postgresql-14.host | default "devops-pg.devops-ns.svc"}}>:<config.{{.toolchains.postgresql-14.port | default "5432"}}>/sonarqubedb?socketTimeout=1500
+      jdbcUsername: <config.{{.toolchains.postgresql-14.username | default "postgres"}}>
     account:
       adminPasswordSecretName: sonarqube-root-password
     resources:
